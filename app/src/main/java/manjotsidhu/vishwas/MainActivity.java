@@ -10,6 +10,7 @@ import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -32,6 +33,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.support.v7.widget.Toolbar;
+import android.app.ProgressDialog;
+import android.os.Handler;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -40,7 +43,7 @@ import java.util.List;
 
 import static manjotsidhu.vishwas.Configurator.path;
 
-public class MainActivity extends AppCompatActivity  {
+public class MainActivity extends AppCompatActivity {
 
     // Media Player
     MediaPlayer mp = null;
@@ -49,7 +52,7 @@ public class MainActivity extends AppCompatActivity  {
     private MediaRecorder myAudioRecorder;
 
     // State = edit mode, lesson = current lesson, cb = temporary current button pressed
-    int state = 0,lesson = 0, cb = 0;
+    int state = 0, lesson = 0, cb = 0;
 
     // Configurator class
     Configurator config = new Configurator();
@@ -60,12 +63,21 @@ public class MainActivity extends AppCompatActivity  {
     // Buttons
     Button button1, button2, button3, button4, button5, button6;
 
+    // Server IP
+    String ServerIp = null;
+
     // App Permissions
     private final static int REQUEST_CODE_ASK_PERMISSIONS = 1;
-    private static final String[] REQUIRED_SDK_PERMISSIONS = new String[] {
-            Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE };
+    private static final String[] REQUIRED_SDK_PERMISSIONS = new String[]{
+            Manifest.permission.RECORD_AUDIO, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE};
 
+    // File Chooser
     Intent intent;
+
+    // Progress dialog for connecting to server
+    private ProgressDialog progressBar;
+    private boolean progressBarStatus = false;
+    private Handler progressBarbHandler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -84,7 +96,7 @@ public class MainActivity extends AppCompatActivity  {
         button5 = this.findViewById(R.id.button5);
         button6 = this.findViewById(R.id.button6);
 
-        if(!Tools.fileExists(path+"/"+Configurator.config)) {
+        if (!Tools.fileExists(path + "/" + Configurator.config)) {
             try {
                 config.initConfig();
             } catch (IOException e) {
@@ -100,7 +112,7 @@ public class MainActivity extends AppCompatActivity  {
 
         // Lessons switcher
         final Spinner lessonsSwitcher = findViewById(R.id.spinner);
-        for (int i=1; i<=config.getLessons();i++)
+        for (int i = 1; i <= config.getLessons(); i++)
             buttonNames.add("Lesson " + i);
         ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, buttonNames);
         lessonsSwitcher.setAdapter(dataAdapter);
@@ -121,7 +133,7 @@ public class MainActivity extends AppCompatActivity  {
         });
 
         boolean gotFocus = requestAudioFocus(MainActivity.this);
-        if(gotFocus) {
+        if (gotFocus) {
             // Got Audio Focus
         }
 
@@ -209,7 +221,7 @@ public class MainActivity extends AppCompatActivity  {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-            buttonNames.remove(buttonNames.size()-1);
+            buttonNames.remove(buttonNames.size() - 1);
             return true;
         } else if (id == R.id.action_vol) {
             AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
@@ -237,7 +249,7 @@ public class MainActivity extends AppCompatActivity  {
     }
 
     private boolean requestAudioFocus(final Context context) {
-        AudioManager am = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+        AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
 
         // Request audio focus for playback
         int result = 0;
@@ -264,7 +276,7 @@ public class MainActivity extends AppCompatActivity  {
 
         button1.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(state == 1) {
+                if (state == 1) {
                     editDialog(0);
                 } else {
                     play(0, false);
@@ -274,7 +286,7 @@ public class MainActivity extends AppCompatActivity  {
 
         button2.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(state == 1) {
+                if (state == 1) {
                     editDialog(1);
                 } else {
                     play(1, false);
@@ -284,7 +296,7 @@ public class MainActivity extends AppCompatActivity  {
 
         button3.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(state == 1) {
+                if (state == 1) {
                     editDialog(2);
                 } else {
                     play(2, false);
@@ -294,7 +306,7 @@ public class MainActivity extends AppCompatActivity  {
 
         button4.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(state == 1) {
+                if (state == 1) {
                     editDialog(3);
                 } else {
                     play(3, false);
@@ -304,7 +316,7 @@ public class MainActivity extends AppCompatActivity  {
 
         button5.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(state == 1) {
+                if (state == 1) {
                     editDialog(4);
                 } else {
                     play(4, false);
@@ -314,7 +326,7 @@ public class MainActivity extends AppCompatActivity  {
 
         button6.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                if(state == 1) {
+                if (state == 1) {
                     editDialog(5);
                 } else {
                     play(5, false);
@@ -336,6 +348,8 @@ public class MainActivity extends AppCompatActivity  {
                     button6.setBackgroundResource(R.drawable.roundedbutton_edit);
 
                     Toast.makeText(getApplicationContext(), "Edit mode is on", Toast.LENGTH_LONG).show();
+
+                    if(ServerIp == null) connectToServer();
                 } else {
                     state = 0;
                     button1.setBackgroundResource(R.drawable.roundedbutton);
@@ -352,12 +366,12 @@ public class MainActivity extends AppCompatActivity  {
     }
 
     public void updateButton() {
-        button1.setText(config.getLessonName(lesson,0));
-        button2.setText(config.getLessonName(lesson,1));
-        button3.setText(config.getLessonName(lesson,2));
-        button4.setText(config.getLessonName(lesson,3));
-        button5.setText(config.getLessonName(lesson,4));
-        button6.setText(config.getLessonName(lesson,5));
+        button1.setText(config.getLessonName(lesson, 0));
+        button2.setText(config.getLessonName(lesson, 1));
+        button3.setText(config.getLessonName(lesson, 2));
+        button4.setText(config.getLessonName(lesson, 3));
+        button5.setText(config.getLessonName(lesson, 4));
+        button6.setText(config.getLessonName(lesson, 5));
     }
 
     public void play(int i, boolean isTemp) {
@@ -381,7 +395,7 @@ public class MainActivity extends AppCompatActivity  {
         else
             // TODO dummy audio file : mp = MediaPlayer.create(this, Uri.fromFile(new File(DUMMY_AUDIO)));
 
-        mp.start();
+            mp.start();
     }
 
 
@@ -397,7 +411,7 @@ public class MainActivity extends AppCompatActivity  {
 
         editBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                    play(i, false);
+                play(i, false);
             }
         });
 
@@ -405,19 +419,19 @@ public class MainActivity extends AppCompatActivity  {
         final String[] items = {"Record from microphone", "Select audio file from device"};
         AlertDialog.Builder builder2 = new AlertDialog.Builder(this);
         builder2.setItems(items, new DialogInterface.OnClickListener() {
-                    public void onClick(DialogInterface dialog, int which) {
-                        //Toast.makeText(getApplicationContext(), items[which] + " is clicked", Toast.LENGTH_SHORT).show();
-                        if (which == 1) {
-                            // Select file from File Browser
-                            intent = new Intent(Intent.ACTION_GET_CONTENT);
-                            intent.setType("*/*");
-                            startActivityForResult(intent, 7);
-                            cb = i;
-                        } else {
-                            record(i);
-                        }
-                    }
-                });
+            public void onClick(DialogInterface dialog, int which) {
+                //Toast.makeText(getApplicationContext(), items[which] + " is clicked", Toast.LENGTH_SHORT).show();
+                if (which == 1) {
+                    // Select file from File Browser
+                    intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    intent.setType("*/*");
+                    startActivityForResult(intent, 7);
+                    cb = i;
+                } else {
+                    record(i);
+                }
+            }
+        });
         final AlertDialog alertDialog = builder2.create();
 
         Button changeBtn = dialogLayout.findViewById(R.id.editSound);
@@ -438,10 +452,10 @@ public class MainActivity extends AppCompatActivity  {
                     public void onClick(DialogInterface dialog, int which) {
                         // Save Changes
 
-                        if(mp != null) mp.stop();
+                        if (mp != null) mp.stop();
 
                         // Change button name if changed
-                        if (editText.getText().toString() !=  config.getLessonName(lesson, i)) {
+                        if (editText.getText().toString() != config.getLessonName(lesson, i)) {
                             try {
                                 config.changeLessonName(lesson, i, editText.getText().toString());
                             } catch (IOException e) {
@@ -453,11 +467,19 @@ public class MainActivity extends AppCompatActivity  {
 
                         // Sync changes to server
                         String fp = path + "/" + lesson + i;
+
                         if (Tools.fileExists(fp + ".mp3")) {
-                            new Client(MainActivity.this).execute(path + "/config.json" ,fp + ".mp3");
+                            fp += ".mp3";
                         } else if (Tools.fileExists(fp + ".3gp")) {
-                            new Client(MainActivity.this).execute(path + "/config.json" , fp + ".3gp");
+                            fp += ".3gp";
                         }
+
+                        new Client(MainActivity.this, path + "/" + Configurator.config).execute();
+                        new Client(MainActivity.this, fp).execute();
+                        // TODO Fix this -\v\
+                        new Client(MainActivity.this, path + "/" + Configurator.config).execute();
+                        new Client(MainActivity.this, fp).execute();
+
 
                         Toast.makeText(getApplicationContext(),
                                 "Changes have been saved",
@@ -533,26 +555,26 @@ public class MainActivity extends AppCompatActivity  {
 
         startBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                    myAudioRecorder = new MediaRecorder();
-                    myAudioRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                    myAudioRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-                    myAudioRecorder.setAudioEncoder(MediaRecorder.OutputFormat.AMR_NB);
-                    myAudioRecorder.setOutputFile(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".3gp");
-                    try {
-                        myAudioRecorder.prepare();
-                        myAudioRecorder.start();
-                    } catch (IllegalStateException ise) {
-                        // make something ...
-                    } catch (IOException ioe) {
-                        // make something
-                    }
-                    Toast.makeText(getApplicationContext(), "Recording started", Toast.LENGTH_LONG).show();
+                myAudioRecorder = new MediaRecorder();
+                myAudioRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                myAudioRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+                myAudioRecorder.setAudioEncoder(MediaRecorder.OutputFormat.AMR_NB);
+                myAudioRecorder.setOutputFile(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".3gp");
+                try {
+                    myAudioRecorder.prepare();
+                    myAudioRecorder.start();
+                } catch (IllegalStateException ise) {
+                    // make something ...
+                } catch (IOException ioe) {
+                    // make something
+                }
+                Toast.makeText(getApplicationContext(), "Recording started", Toast.LENGTH_LONG).show();
 
-                    startBtn.setEnabled(false);
-                    stopBtn.setEnabled(true);
-                    playBtn.setEnabled(false);
-                    pauseBtn.setEnabled(false);
-                    resetBtn.setEnabled(false);
+                startBtn.setEnabled(false);
+                stopBtn.setEnabled(true);
+                playBtn.setEnabled(false);
+                pauseBtn.setEnabled(false);
+                resetBtn.setEnabled(false);
             }
         });
 
@@ -610,7 +632,6 @@ public class MainActivity extends AppCompatActivity  {
                     if (resultCode == RESULT_OK) {
                         Uri currFileURI = data.getData();
 
-                        Log.v("TESt", Tools.getRealPathFromURI(this, currFileURI));
                         InputStream in = new FileInputStream(Tools.getRealPathFromURI(this, currFileURI));
                         OutputStream out = new FileOutputStream(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/" + lesson + cb + ".mp3");
 
@@ -627,9 +648,80 @@ public class MainActivity extends AppCompatActivity  {
                     }
                     break;
             }
-        }  catch (Exception e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void connectToServer() {
+        HotspotManager hm = new HotspotManager(this);
+        hm.start("pi", "raspberry");
+
+        progressBar = new ProgressDialog(this);
+        progressBar.setCancelable(true);
+        progressBar.setTitle("Connecting to hardware");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            progressBar.setMessage("Please turn on your hotspot and location and set the following credients:\n\n" +
+                    "Hotspot Name        : pi\n" +
+                    "Hotspot Password: raspberry");
+        } else {
+            progressBar.setMessage("Please wait...\nMake sure your hotspot and location is on...");
+        }
+
+        progressBar.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        progressBar.setProgress(0);
+        progressBar.setMax(100);
+        progressBar.show();
+        progressBarStatus = false;
+
+        progressBar.setOnCancelListener(new DialogInterface.OnCancelListener() {
+            @Override
+            public void onCancel(DialogInterface dialog) {
+                state = 0;
+                updateButton();
+
+                button1.setBackgroundResource(R.drawable.roundedbutton);
+                button2.setBackgroundResource(R.drawable.roundedbutton);
+                button3.setBackgroundResource(R.drawable.roundedbutton);
+                button4.setBackgroundResource(R.drawable.roundedbutton);
+                button5.setBackgroundResource(R.drawable.roundedbutton);
+                button6.setBackgroundResource(R.drawable.roundedbutton);
+
+                Toast.makeText(getApplicationContext(), "Failed to connect to hardware", Toast.LENGTH_LONG).show();
+            }
+        });
+
+        new Thread(new Runnable() {
+            public void run() {
+                while (!progressBarStatus) {
+                    ServerIp = Tools.getIP(true);
+                    progressBarStatus = true ? ServerIp != null : false;
+
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    progressBarbHandler.post(new Runnable() {
+                        public void run() {
+                        //    progressBar.setProgress(progressBarStatus);
+                        }
+                    });
+                }
+
+                if (progressBarStatus) {
+                    try {
+                        progressBar.setTitle("Connection Successful");
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    progressBar.dismiss();
+                }
+            }
+        }).start();
     }
 
 }

@@ -97,7 +97,7 @@ public class Configurator {
 
         while (iterator1.hasNext()) {
             names.add(new ArrayList<String>());
-            JSONArray name = (JSONArray) iterator1.next();
+            JSONArray name = iterator1.next();
             Iterator<String> iterator2 = name.iterator();
             while (iterator2.hasNext()) {
                 names.get(i).add(iterator2.next());
