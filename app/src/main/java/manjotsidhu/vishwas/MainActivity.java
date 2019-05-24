@@ -391,8 +391,7 @@ public class MainActivity extends AppCompatActivity {
         if (Tools.fileExists(file))
             mp = MediaPlayer.create(this, Uri.fromFile(new File(file)));
         else
-            // TODO dummy audio file :
-            //mp = MediaPlayer.create(this, Uri.fromFile(new File(DUMMY_AUDIO)));
+            mp = MediaPlayer.create(this, R.raw.sample);
 
             mp.start();
     }
