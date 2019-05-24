@@ -384,16 +384,15 @@ public class MainActivity extends AppCompatActivity {
 
         String file;
         if (isTemp)
-            file = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i;
+            file = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".mp3";
         else
-            file = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/" + lesson + i;
+            file = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/" + lesson + i + ".mp3";
 
-        if (Tools.fileExists(file + ".mp3"))
-            mp = MediaPlayer.create(this, Uri.fromFile(new File(file + ".mp3")));
-        else if (Tools.fileExists(file + ".3gp"))
-            mp = MediaPlayer.create(this, Uri.fromFile(new File(file + ".3gp")));
+        if (Tools.fileExists(file))
+            mp = MediaPlayer.create(this, Uri.fromFile(new File(file)));
         else
-            // TODO dummy audio file : mp = MediaPlayer.create(this, Uri.fromFile(new File(DUMMY_AUDIO)));
+            // TODO dummy audio file :
+            //mp = MediaPlayer.create(this, Uri.fromFile(new File(DUMMY_AUDIO)));
 
             mp.start();
     }
@@ -466,13 +465,7 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         // Sync changes to server
-                        String fp = path + "/" + lesson + i;
-
-                        if (Tools.fileExists(fp + ".mp3")) {
-                            fp += ".mp3";
-                        } else if (Tools.fileExists(fp + ".3gp")) {
-                            fp += ".3gp";
-                        }
+                        String fp = path + "/" + lesson + i + ".mp3";
 
                         new Client(MainActivity.this, path + "/" + Configurator.config).execute();
                         new Client(MainActivity.this, fp).execute();
@@ -518,8 +511,8 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(DialogInterface dialog, int which) {
                         try {
                             mp.stop();
-                            InputStream in = new FileInputStream(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".3gp");
-                            OutputStream out = new FileOutputStream(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/" + lesson + i + ".3gp");
+                            InputStream in = new FileInputStream(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".mp3");
+                            OutputStream out = new FileOutputStream(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/" + lesson + i + ".mp3");
 
                             // Copy the bits from instream to outstream
                             byte[] buf = new byte[1024];
@@ -531,7 +524,7 @@ public class MainActivity extends AppCompatActivity {
 
                             in.close();
                             out.close();
-                            new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".3gp").delete();
+                            new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".mp3").delete();
 
                             Toast.makeText(getApplicationContext(),
                                     "Recording Saved",
@@ -557,9 +550,9 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 myAudioRecorder = new MediaRecorder();
                 myAudioRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                myAudioRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-                myAudioRecorder.setAudioEncoder(MediaRecorder.OutputFormat.AMR_NB);
-                myAudioRecorder.setOutputFile(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".3gp");
+                myAudioRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                myAudioRecorder.setOutputFile(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".mp3");
+                myAudioRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
                 try {
                     myAudioRecorder.prepare();
                     myAudioRecorder.start();
@@ -614,7 +607,7 @@ public class MainActivity extends AppCompatActivity {
 
         resetBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".3gp").delete();
+                new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".mp3").delete();
 
                 startBtn.setEnabled(true);
                 stopBtn.setEnabled(false);
