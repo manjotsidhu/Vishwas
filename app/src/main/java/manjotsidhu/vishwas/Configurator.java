@@ -6,9 +6,11 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.Iterator;
 
 import android.os.Environment;
+import android.util.Log;
 
 public class Configurator {
 
@@ -18,6 +20,7 @@ public class Configurator {
     int lessons;
 
     ArrayList<ArrayList<String>> names = new ArrayList<ArrayList<String>>();
+    Hashtable<Integer, Integer> actions = new Hashtable<>();
 
     Configurator() {
         configFile = new File(path + "/" + config);
@@ -60,7 +63,6 @@ public class Configurator {
 
     public void writeConfig() throws IOException {
         JSONObject obj = new JSONObject();
-
         obj.put("lessons", lessons);
 
         JSONArray jsonN = new JSONArray();
@@ -74,6 +76,15 @@ public class Configurator {
             i++;
         }
         obj.put("names", jsonN);
+
+        JSONArray jsonActions = new JSONArray();
+        for(Integer key: actions.keySet()){
+            JSONObject action = new JSONObject();
+            action.put(key, actions.get(key));
+
+            jsonActions.add(action);
+        }
+        obj.put("actions", jsonActions);
 
         FileOutputStream stream = new FileOutputStream(configFile);
         try {
@@ -104,6 +115,19 @@ public class Configurator {
             }
             i++;
         }
+
+        JSONArray ac = (JSONArray) jsonObject.get("actions");
+        if(ac != null) {
+            Iterator<JSONObject> iterator3 = ac.iterator();
+
+            while (iterator3.hasNext()) {
+                JSONObject tAct = iterator3.next();
+                for (Object key : tAct.keySet()) {
+                    Long l = (Long) tAct.get(key);
+                    actions.put(Integer.valueOf((String) key), l.intValue());
+                }
+            }
+        }
     }
 
     public int getLessons() {
@@ -127,6 +151,7 @@ public class Configurator {
     public void deleteLesson() throws IOException {
         lessons--;
         names.remove(names.size()-1);
+
         writeConfig();
     }
 
@@ -137,6 +162,12 @@ public class Configurator {
     public void changeLessonName(int lesson, int button, String str) throws IOException {
         names.get(lesson).remove(button);
         names.get(lesson).add(button, str);
+
+        writeConfig();
+    }
+
+    public void addAction(int button, int actionId) throws IOException {
+        actions.put(button, actionId);
 
         writeConfig();
     }

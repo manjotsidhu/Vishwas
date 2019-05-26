@@ -12,6 +12,7 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
@@ -153,6 +154,7 @@ public class MainActivity extends AppCompatActivity {
                 missingPermissions.add(permission);
             }
         }
+
         if (!missingPermissions.isEmpty()) {
             // request all missing permissions
             final String[] permissions = missingPermissions
@@ -163,6 +165,16 @@ public class MainActivity extends AppCompatActivity {
             Arrays.fill(grantResults, PackageManager.PERMISSION_GRANTED);
             onRequestPermissionsResult(REQUEST_CODE_ASK_PERMISSIONS, REQUIRED_SDK_PERMISSIONS,
                     grantResults);
+        }
+
+        // WRITE_SETTINGS permission for hotspot >= M and < O
+        if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O)) {
+            if (!Settings.System.canWrite(this)) {
+                Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_WRITE_SETTINGS);
+                intent.setData(Uri.parse("package:" + this.getPackageName()));
+                intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                this.startActivity(intent);
+            }
         }
     }
 
@@ -231,19 +243,14 @@ public class MainActivity extends AppCompatActivity {
         } else if (id == R.id.action_exit) {
             finish();
             System.exit(0);
-        } //else if (id == R.id.action_test) {
-            /* ONLY FOR TESTING PURPOSE
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Log.d("WIFI", "Going to turn on wifi");
-                turnOnHotspot();
-            } else {
-                Log.d("WIFI", "I can't turn on wifi");
-                Log.d("BUILD.VERSION.SDK_INT", String.valueOf(Build.VERSION.SDK_INT));
-                Log.d("Build.VERSION_CODES.O", String.valueOf(Build.VERSION_CODES.O));
+        } else if (id == R.id.action_test) {
+            // ONLY FOR TESTING PURPOSE
+            try {
+                config.addAction(1, 0);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            getIp s = new getIp(this);
-            s.execute();*/
-        //}
+        }
 
         return super.onOptionsItemSelected(item);
     }
@@ -349,7 +356,7 @@ public class MainActivity extends AppCompatActivity {
 
                     Toast.makeText(getApplicationContext(), "Edit mode is on", Toast.LENGTH_LONG).show();
 
-                    if(ServerIp == null) connectToServer();
+                    connectToServer();
                 } else {
                     state = 0;
                     button1.setBackgroundResource(R.drawable.roundedbutton);
@@ -466,16 +473,11 @@ public class MainActivity extends AppCompatActivity {
                         // Sync changes to server
                         String fp = path + "/" + lesson + i + ".mp3";
 
-                        new Client(MainActivity.this, path + "/" + Configurator.config).execute();
-                        new Client(MainActivity.this, fp).execute();
+                        new Client(MainActivity.this, ServerIp, path + "/" + Configurator.config).execute();
+                        if(Tools.fileExists(fp)) new Client(MainActivity.this, ServerIp, fp).execute();
                         // TODO Fix this -\v\
-                        new Client(MainActivity.this, path + "/" + Configurator.config).execute();
-                        new Client(MainActivity.this, fp).execute();
-
-
-                        Toast.makeText(getApplicationContext(),
-                                "Changes have been saved",
-                                Toast.LENGTH_SHORT).show();
+                        new Client(MainActivity.this, ServerIp, path + "/" + Configurator.config).execute();
+                        if(Tools.fileExists(fp)) new Client(MainActivity.this, ServerIp, fp).execute();
                     }
                 });
 
@@ -509,7 +511,7 @@ public class MainActivity extends AppCompatActivity {
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         try {
-                            mp.stop();
+                            if(mp != null) mp.stop();
                             InputStream in = new FileInputStream(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".mp3");
                             OutputStream out = new FileOutputStream(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/" + lesson + i + ".mp3");
 
@@ -681,6 +683,8 @@ public class MainActivity extends AppCompatActivity {
                 button6.setBackgroundResource(R.drawable.roundedbutton);
 
                 Toast.makeText(getApplicationContext(), "Failed to connect to hardware", Toast.LENGTH_LONG).show();
+
+                progressBarStatus = true;
             }
         });
 
@@ -705,7 +709,8 @@ public class MainActivity extends AppCompatActivity {
 
                 if (progressBarStatus) {
                     try {
-                        progressBar.setTitle("Connection Successful");
+                        // TODO fix this \v\
+                        //progressBar.setTitle("Connection Successful");
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();

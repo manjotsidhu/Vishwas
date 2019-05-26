@@ -9,6 +9,7 @@ import android.os.StrictMode;
 import android.support.annotation.RequiresApi;
 import android.util.Log;
 
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class HotspotManager {
@@ -18,6 +19,8 @@ public class HotspotManager {
 
     HotspotManager(Context context) {
         this.context = context;
+
+        mWifiManager = (WifiManager) context.getSystemService(Context.WIFI_SERVICE);
 
         StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder()
                 .permitAll().build();
@@ -42,7 +45,20 @@ public class HotspotManager {
             //    mReservation.close();
             //}
         } else {
-            mWifiManager.setWifiEnabled(false);
+            Method method = null;
+
+            try {
+                method = mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
+                method.invoke(mWifiManager, null, false);
+
+            } catch (NoSuchMethodException e) {
+                e.printStackTrace();
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            } catch (InvocationTargetException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 
@@ -75,6 +91,8 @@ public class HotspotManager {
     }
 
     private void turnOnHotspot(String ssid, String pwd) {
+        mWifiManager.setWifiEnabled(false);
+
         WifiConfiguration wifiCon = new WifiConfiguration();
         wifiCon.SSID = ssid;
         wifiCon.preSharedKey = pwd;
@@ -84,7 +102,7 @@ public class HotspotManager {
         wifiCon.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.WPA_PSK);
         try {
             Method setWifiApMethod = mWifiManager.getClass().getMethod("setWifiApEnabled", WifiConfiguration.class, boolean.class);
-            boolean apstatus=(Boolean) setWifiApMethod.invoke(mWifiManager, wifiCon,true);
+            boolean apstatus=(Boolean) setWifiApMethod.invoke(mWifiManager, wifiCon, true);
         }
         catch (Exception e) {
             Log.e(this.getClass().toString(), "", e);

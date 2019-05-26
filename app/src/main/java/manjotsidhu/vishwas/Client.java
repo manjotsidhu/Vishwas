@@ -2,23 +2,25 @@ package manjotsidhu.vishwas;
 
 import android.content.Context;
 import android.os.AsyncTask;
+import android.util.Log;
 import android.widget.Toast;
 
 import java.io.*;
 import java.net.Socket;
 
-class Client extends AsyncTask<Void, Void, Void> {
+class Client extends AsyncTask<Void, Boolean, Boolean> {
     static String host = null;
     final static int PORT = 4444;
     String Fp;
     private Context context;
 
-    public Client(Context context, String Fp) {
+    public Client(Context context, String host, String Fp) {
         this.context = context;
+        this.host = host;
         this.Fp = Fp;
     }
 
-    public static void serve(String filePath) {
+    public Boolean serve(String filePath) {
         try {
             Socket sock = new Socket(host, PORT);
 
@@ -50,24 +52,32 @@ class Client extends AsyncTask<Void, Void, Void> {
             os.close();
             dos.close();
             sock.close();
+
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
+
+            return false;
         }
     }
 
 
     @Override
-    protected Void doInBackground(Void... voids) {
-        serve(Fp);
-        return null;
+    protected Boolean doInBackground(Void... voids) {
+        return serve(Fp);
     }
 
     @Override
-    protected void onPostExecute(Void v) {
-        // TODO turn off hotspot
+    protected void onPostExecute(Boolean v) {
+        // TODO turn off hotspot and location
 
-        Toast.makeText(context,
-                "Changes have been saved",
-                Toast.LENGTH_SHORT).show();
+        if(v)
+            Toast.makeText(context,
+                    "Changes have been saved",
+                    Toast.LENGTH_SHORT).show();
+        else
+            Toast.makeText(context,
+                    "Failed to save changes, Please try again",
+                    Toast.LENGTH_LONG).show();
     }
 }

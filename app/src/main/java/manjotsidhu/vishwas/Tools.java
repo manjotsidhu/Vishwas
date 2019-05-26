@@ -34,12 +34,13 @@ public class Tools {
 
     public static String getIP(boolean onlyReachables) {
         BufferedReader bufRead = null;
-        Log.v("getIP init", "lets go");
+        //Log.v("getIP init", "lets go");
 
         try {
             bufRead = new BufferedReader(new FileReader("/proc/net/arp"));
             String fileLine;
             while ((fileLine = bufRead.readLine()) != null) {
+                Log.v("Tools.getIP", fileLine);
                 String[] splitted = fileLine.split(" +");
                 if ((splitted != null) && (splitted.length >= 4)) {
 
@@ -52,6 +53,7 @@ public class Tools {
                             try {
                                 Socket tSock = new Socket(splitted[0], Client.PORT);
                                 //Log.v("getIP3", splitted[0]);
+                                tSock.close();
                                 return splitted[0];
                             } catch (Exception e) {
                                 e.printStackTrace();
