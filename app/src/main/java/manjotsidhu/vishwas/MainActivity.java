@@ -29,6 +29,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.support.v7.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -46,6 +47,9 @@ import static manjotsidhu.vishwas.Configurator.path;
 
 public class MainActivity extends AppCompatActivity {
 
+    // Number of Buttons
+    public final static int HW_BUTTONS = 6;
+
     // Media Player
     MediaPlayer mp = null;
 
@@ -62,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
     final List<String> buttonNames = new ArrayList<>();
 
     // Buttons
-    Button button1, button2, button3, button4, button5, button6;
+   Button[] buttons = new Button[HW_BUTTONS];
 
     // Server IP
     String ServerIp = null;
@@ -90,12 +94,18 @@ public class MainActivity extends AppCompatActivity {
         setSupportActionBar(mTopToolbar);
         mTopToolbar.setTitleTextColor(Color.WHITE);
 
-        button1 = this.findViewById(R.id.button1);
-        button2 = this.findViewById(R.id.button2);
-        button3 = this.findViewById(R.id.button3);
-        button4 = this.findViewById(R.id.button4);
-        button5 = this.findViewById(R.id.button5);
-        button6 = this.findViewById(R.id.button6);
+        //button1 = this.findViewById(R.id.button1);
+
+        GridLayout layout = this.findViewById(R.id.grid);
+        for (int i = 0 ; i < buttons.length; i++) {
+            buttons[i] = (Button) getLayoutInflater().inflate(R.layout.button_template, null);
+            layout.addView(buttons[i]);
+
+            // TODO margin from template doesn't work
+            GridLayout.LayoutParams params = (GridLayout.LayoutParams) buttons[i].getLayoutParams();
+            params.setMargins(40, 40, 40, 40);
+            buttons[i].setLayoutParams(params);
+        }
 
         if (!Tools.fileExists(path + "/" + Configurator.config)) {
             try {
@@ -281,65 +291,20 @@ public class MainActivity extends AppCompatActivity {
         // Edit mode button
         final FloatingActionButton change = this.findViewById(R.id.change);
 
-        button1.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (state == 1) {
-                    editDialog(0);
-                } else {
-                    play(0, false);
+        int i = 0;
+        for (Button b: buttons) {
+            final int finalI = i;
+            b.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    if (state == 1) {
+                        editDialog(finalI);
+                    } else {
+                        play(finalI, false);
+                    }
                 }
-            }
-        });
-
-        button2.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (state == 1) {
-                    editDialog(1);
-                } else {
-                    play(1, false);
-                }
-            }
-        });
-
-        button3.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (state == 1) {
-                    editDialog(2);
-                } else {
-                    play(2, false);
-                }
-            }
-        });
-
-        button4.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (state == 1) {
-                    editDialog(3);
-                } else {
-                    play(3, false);
-                }
-            }
-        });
-
-        button5.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (state == 1) {
-                    editDialog(4);
-                } else {
-                    play(4, false);
-                }
-            }
-        });
-
-        button6.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                if (state == 1) {
-                    editDialog(5);
-                } else {
-                    play(5, false);
-                }
-            }
-        });
+            });
+            i++;
+        }
 
         change.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
@@ -347,24 +312,18 @@ public class MainActivity extends AppCompatActivity {
 
                 if (state == 0) {
                     state = 1;
-                    button1.setBackgroundResource(R.drawable.roundedbutton_edit);
-                    button2.setBackgroundResource(R.drawable.roundedbutton_edit);
-                    button3.setBackgroundResource(R.drawable.roundedbutton_edit);
-                    button4.setBackgroundResource(R.drawable.roundedbutton_edit);
-                    button5.setBackgroundResource(R.drawable.roundedbutton_edit);
-                    button6.setBackgroundResource(R.drawable.roundedbutton_edit);
+                    for (Button b: buttons) {
+                        b.setBackgroundResource(R.drawable.roundedbutton_edit);
+                    }
 
                     Toast.makeText(getApplicationContext(), "Edit mode is on", Toast.LENGTH_LONG).show();
 
                     connectToServer();
                 } else {
                     state = 0;
-                    button1.setBackgroundResource(R.drawable.roundedbutton);
-                    button2.setBackgroundResource(R.drawable.roundedbutton);
-                    button3.setBackgroundResource(R.drawable.roundedbutton);
-                    button4.setBackgroundResource(R.drawable.roundedbutton);
-                    button5.setBackgroundResource(R.drawable.roundedbutton);
-                    button6.setBackgroundResource(R.drawable.roundedbutton);
+                    for (Button b: buttons) {
+                        b.setBackgroundResource(R.drawable.roundedbutton);
+                    }
 
                     Toast.makeText(getApplicationContext(), "Edit mode is off", Toast.LENGTH_LONG).show();
                 }
@@ -373,12 +332,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void updateButton() {
-        button1.setText(config.getLessonName(lesson, 0));
-        button2.setText(config.getLessonName(lesson, 1));
-        button3.setText(config.getLessonName(lesson, 2));
-        button4.setText(config.getLessonName(lesson, 3));
-        button5.setText(config.getLessonName(lesson, 4));
-        button6.setText(config.getLessonName(lesson, 5));
+        int i = 0;
+        for (Button b: buttons) {
+            b.setText(config.getLessonName(lesson, i));
+            i++;
+        }
     }
 
     public void play(int i, boolean isTemp) {
@@ -549,6 +507,8 @@ public class MainActivity extends AppCompatActivity {
 
         startBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
+
+                // TODO Audio Recorder records in MPEG AAC Format which jLayer fails to read
                 myAudioRecorder = new MediaRecorder();
                 myAudioRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
                 myAudioRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
@@ -675,12 +635,8 @@ public class MainActivity extends AppCompatActivity {
                 state = 0;
                 updateButton();
 
-                button1.setBackgroundResource(R.drawable.roundedbutton);
-                button2.setBackgroundResource(R.drawable.roundedbutton);
-                button3.setBackgroundResource(R.drawable.roundedbutton);
-                button4.setBackgroundResource(R.drawable.roundedbutton);
-                button5.setBackgroundResource(R.drawable.roundedbutton);
-                button6.setBackgroundResource(R.drawable.roundedbutton);
+                for (Button b: buttons)
+                    b.setBackgroundResource(R.drawable.roundedbutton);
 
                 Toast.makeText(getApplicationContext(), "Failed to connect to hardware", Toast.LENGTH_LONG).show();
 

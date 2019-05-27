@@ -56,7 +56,7 @@ public class Tools {
                                 tSock.close();
                                 return splitted[0];
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                //e.printStackTrace();
                                 continue;
                             }
                         }
