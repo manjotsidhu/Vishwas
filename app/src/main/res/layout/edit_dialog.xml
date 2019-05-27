@@ -46,13 +46,43 @@
                 android:ems="10"
                 android:inputType="textPersonName"
                 android:text="Button 1" />
+
         </LinearLayout>
+
+        <Switch
+            android:id="@+id/sLesson"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Secondary Lesson" />
+
+        <android.support.v7.widget.GridLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            app:columnCount="2">
+
+            <TextView
+                android:id="@+id/textView3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Select Action"
+                app:layout_gravity="center_horizontal" />
+
+            <Spinner
+                android:id="@+id/actionSwitcher"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layout_gravity="fill_horizontal" />
+        </android.support.v7.widget.GridLayout>
 
         <Button
             android:id="@+id/editSound"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="10dp"
+            android:layout_weight="1"
             android:backgroundTint="@android:color/holo_green_light"
             android:text="Change Sound" />
 

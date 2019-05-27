@@ -32,6 +32,7 @@ import android.widget.EditText;
 import android.support.v7.widget.GridLayout;
 import android.widget.ImageButton;
 import android.widget.Spinner;
+import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.support.v7.widget.Toolbar;
@@ -60,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     int state = 0, lesson = 0, cb = 0;
 
     // Configurator class
-    Configurator config = new Configurator();
+    Configurator config = new Configurator(HW_BUTTONS);
 
     // Button Names
     final List<String> buttonNames = new ArrayList<>();
@@ -117,6 +118,12 @@ public class MainActivity extends AppCompatActivity {
 
         try {
             config.readConfig();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            config.writeConfig();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -254,12 +261,12 @@ public class MainActivity extends AppCompatActivity {
             finish();
             System.exit(0);
         } else if (id == R.id.action_test) {
-            // ONLY FOR TESTING PURPOSE
+            /* ONLY FOR TESTING PURPOSE
             try {
                 config.addAction(1, 0);
             } catch (IOException e) {
                 e.printStackTrace();
-            }
+            }*/
         }
 
         return super.onOptionsItemSelected(item);
@@ -299,7 +306,7 @@ public class MainActivity extends AppCompatActivity {
                     if (state == 1) {
                         editDialog(finalI);
                     } else {
-                        play(finalI, false);
+                        doAction(finalI);
                     }
                 }
             });
@@ -317,7 +324,6 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     Toast.makeText(getApplicationContext(), "Edit mode is on", Toast.LENGTH_LONG).show();
-
                     connectToServer();
                 } else {
                     state = 0;
@@ -331,10 +337,39 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void doAction(int button) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setPositiveButton("OK", null);
+
+        switch (config.getButtonAction(lesson, button)) {
+            case 0: play(button, false); break;
+            case 1: builder.setTitle(config.getButtonName(lesson, button) + " is set to next lesson");
+                    builder.setMessage("This button is set to proceed to the next lesson on the hardware");
+                    builder.create().show();
+                    break;
+            case 2: builder.setTitle(config.getButtonName(lesson, button) + " is set to previous lesson");
+                    builder.setMessage("This button is set to proceed to the previous lesson on the hardware");
+                    builder.create().show();
+                    break;
+            case 3: builder.setTitle(config.getButtonName(lesson, button) + " is set to shutdown");
+                    builder.setMessage("This button is set to shutdown the hardware on the hardware");
+                    builder.create().show();
+                    break;
+            case 4: builder.setTitle(config.getButtonName(lesson, button) + " is set to increase volume");
+                    builder.setMessage("This button is set to increase the volume on the hardware");
+                    builder.create().show();
+                    break;
+            case 5: builder.setTitle(config.getButtonName(lesson, button) + " is set to decrease volume");
+                    builder.setMessage("This button is set to decrease the volume on the hardware");
+                    builder.create().show();
+                    break;
+        }
+    }
+
     public void updateButton() {
         int i = 0;
         for (Button b: buttons) {
-            b.setText(config.getLessonName(lesson, i));
+            b.setText(config.getButtonName(lesson, i));
             i++;
         }
     }
@@ -367,14 +402,14 @@ public class MainActivity extends AppCompatActivity {
         View dialogLayout = inflater.inflate(R.layout.edit_dialog, null);
 
         Button editBtn = dialogLayout.findViewById(R.id.editBtn1);
-        editBtn.setText(config.getLessonName(lesson, i));
+        editBtn.setText(config.getButtonName(lesson, i));
 
         final EditText editText = dialogLayout.findViewById(R.id.editText);
-        editText.setText(config.getLessonName(lesson, i), TextView.BufferType.EDITABLE);
+        editText.setText(config.getButtonName(lesson, i), TextView.BufferType.EDITABLE);
 
         editBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                play(i, false);
+                doAction(i);
             }
         });
 
@@ -397,35 +432,86 @@ public class MainActivity extends AppCompatActivity {
         });
         final AlertDialog alertDialog = builder2.create();
 
-        Button changeBtn = dialogLayout.findViewById(R.id.editSound);
-
+        // Change Sound
+        final Button changeBtn = dialogLayout.findViewById(R.id.editSound);
+        changeBtn.setEnabled(false);
         changeBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-               /* Toast.makeText(getApplicationContext(),
-                        "I WILL CHANGE U!",
-                        Toast.LENGTH_SHORT).show();*/
-
                 alertDialog.show();
             }
         });
+
+        // Action Spinner
+        Spinner actionSwitcher = dialogLayout.findViewById(R.id.actionSwitcher);
+        ArrayList<String> actions = new ArrayList<>();
+        actions.add("Play");
+        actions.add("Next Lesson");
+        actions.add("Previous Lesson");
+        actions.add("Shutdown");
+        actions.add("Increase Volume");
+        actions.add("Decrease Volume");
+
+        final int[] tempAction = {config.getButtonAction(lesson, i)};
+        ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, actions);
+        actionSwitcher.setAdapter(dataAdapter);
+        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        actionSwitcher.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // If new action is selected
+                tempAction[0] = position;
+                if (position == 0)
+                    changeBtn.setEnabled(true);
+                else
+                    changeBtn.setEnabled(false);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Nothing
+            }
+        });
+
+        // Secondary Switch
+        final Switch sLessonSwitch = dialogLayout.findViewById(R.id.sLesson);
+        if (config.getsLesson() == lesson)
+            sLessonSwitch.setChecked(true);
+        else
+            sLessonSwitch.setChecked(false);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setPositiveButton("Save",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         // Save Changes
-
                         if (mp != null) mp.stop();
 
                         // Change button name if changed
-                        if (editText.getText().toString() != config.getLessonName(lesson, i)) {
+                        if (editText.getText().toString() != config.getButtonName(lesson, i)) {
                             try {
-                                config.changeLessonName(lesson, i, editText.getText().toString());
+                                config.changeButtonName(lesson, i, editText.getText().toString());
                             } catch (IOException e) {
                                 e.printStackTrace();
                             } finally {
                                 updateButton();
                             }
+                        }
+
+                        // Switch secondary lesson
+                        if(sLessonSwitch.isChecked())
+                            config.setsLesson(lesson);
+
+                        // Change Action if changed
+                        if (config.getButtonAction(lesson, i) != tempAction[0]) {
+                            config.changeButtonAction(lesson, i, tempAction[0]);
+                        }
+
+                        // Write Config
+                        try {
+                            config.writeConfig();
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
 
                         // Sync changes to server

@@ -10,19 +10,25 @@ import java.util.Hashtable;
 import java.util.Iterator;
 
 import android.os.Environment;
-import android.util.Log;
 
 public class Configurator {
+
+    int HW_BUTTONS;
 
     final static String config = "config.json";
     final static String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas";
     File configFile;
-    int lessons;
 
-    ArrayList<ArrayList<String>> names = new ArrayList<ArrayList<String>>();
-    Hashtable<Integer, Integer> actions = new Hashtable<>();
+    int lessonsCount;
+    int pLesson;
+    int sLesson;
 
-    Configurator() {
+    ArrayList<String> lessonNames = new ArrayList<>();
+    ArrayList<ArrayList<String>> buttonNames = new ArrayList<ArrayList<String>>();
+    ArrayList<ArrayList<Integer>> buttonActions = new ArrayList<>();
+
+    Configurator(int HW_BUTTONS) {
+        this.HW_BUTTONS = HW_BUTTONS;
         configFile = new File(path + "/" + config);
 
         File dir = new File(path);
@@ -32,15 +38,13 @@ public class Configurator {
     }
 
     public void initConfig() throws IOException {
-        lessons = 1;
+        lessonsCount = 1;
 
-        names.add(new ArrayList<String>());
-        names.get(names.size()-1).add("Button 1");
-        names.get(names.size()-1).add("Button 2");
-        names.get(names.size()-1).add("Button 3");
-        names.get(names.size()-1).add("Button 4");
-        names.get(names.size()-1).add("Button 5");
-        names.get(names.size()-1).add("Button 6");
+        buttonNames.add(new ArrayList<String>());
+        for (int i = 1; i <= HW_BUTTONS; i++) {
+            buttonNames.get(buttonNames.size() - 1).add("Button " + i);
+            buttonActions.get(buttonNames.size() - 1).add(0);
+        }
 
         writeConfig();
     }
@@ -63,28 +67,30 @@ public class Configurator {
 
     public void writeConfig() throws IOException {
         JSONObject obj = new JSONObject();
-        obj.put("lessons", lessons);
+        obj.put("LessonsCount", lessonsCount);
+        obj.put("PrimaryLesson", pLesson);
+        obj.put("SecondaryLesson", sLesson);
 
-        JSONArray jsonN = new JSONArray();
+        JSONArray lessons = new JSONArray();
         int i = 0;
-        while (i < lessons) {
-            JSONArray n = new JSONArray();
-            for (String j : names.get(i)) {
-                n.add(j);
+        while (i < lessonsCount) {
+            JSONObject lesson = new JSONObject();
+            lesson.put("LessonName", lessonNames.get(i));
+
+            JSONArray buttonsData = new JSONArray();
+            for (int j = 0; j < HW_BUTTONS; j++) {
+                JSONObject button = new JSONObject();
+                button.put("Name", buttonNames.get(i).get(j));
+                button.put("Action", buttonActions.get(i).get(j));
+
+                buttonsData.add(button);
             }
-            jsonN.add(n);
+            lesson.put("ButtonsData", buttonsData);
+
+            lessons.add(lesson);
             i++;
         }
-        obj.put("names", jsonN);
-
-        JSONArray jsonActions = new JSONArray();
-        for(Integer key: actions.keySet()){
-            JSONObject action = new JSONObject();
-            action.put(key, actions.get(key));
-
-            jsonActions.add(action);
-        }
-        obj.put("actions", jsonActions);
+        obj.put("Lessons", lessons);
 
         FileOutputStream stream = new FileOutputStream(configFile);
         try {
@@ -100,75 +106,89 @@ public class Configurator {
         Object obj=JSONValue.parse(s);
         JSONObject jsonObject = (JSONObject) obj;
 
-        lessons = ((Long)jsonObject.get("lessons")).intValue();
+        lessonsCount = ((Long)jsonObject.get("LessonsCount")).intValue();
+        pLesson = ((Long)jsonObject.get("PrimaryLesson")).intValue();
+        sLesson = ((Long)jsonObject.get("SecondaryLesson")).intValue();
 
-        JSONArray n = (JSONArray) jsonObject.get("names");
-        Iterator<JSONArray> iterator1 = n.iterator();
+        JSONArray n = (JSONArray) jsonObject.get("Lessons");
+        Iterator<JSONObject> iterator1 = n.iterator();
         int i = 0;
 
         while (iterator1.hasNext()) {
-            names.add(new ArrayList<String>());
-            JSONArray name = iterator1.next();
-            Iterator<String> iterator2 = name.iterator();
+            JSONObject lesson = iterator1.next();
+
+            lessonNames.add((String) lesson.get("LessonName"));
+
+            JSONArray buttonsData = (JSONArray) lesson.get("ButtonsData");
+            Iterator<JSONObject> iterator2 = buttonsData.iterator();
+            if(buttonNames.size() == i && buttonActions.size() == i) {
+                buttonNames.add(new ArrayList<String>());
+                buttonActions.add(new ArrayList<Integer>());
+            }
+
             while (iterator2.hasNext()) {
-                names.get(i).add(iterator2.next());
+                JSONObject tLesson = iterator2.next();
+                buttonNames.get(i).add((String) tLesson.get("Name"));
+                buttonActions.get(i).add(((Long) tLesson.get("Action")).intValue());
             }
             i++;
-        }
-
-        JSONArray ac = (JSONArray) jsonObject.get("actions");
-        if(ac != null) {
-            Iterator<JSONObject> iterator3 = ac.iterator();
-
-            while (iterator3.hasNext()) {
-                JSONObject tAct = iterator3.next();
-                for (Object key : tAct.keySet()) {
-                    Long l = (Long) tAct.get(key);
-                    actions.put(Integer.valueOf((String) key), l.intValue());
-                }
-            }
         }
     }
 
     public int getLessons() {
-        return lessons;
+        return lessonsCount;
     }
 
     public void addLesson() throws IOException {
-        lessons++;
+        lessonsCount++;
 
-        names.add(new ArrayList<String>());
-        names.get(names.size()-1).add("Text 1");
-        names.get(names.size()-1).add("Text 2");
-        names.get(names.size()-1).add("Text 3");
-        names.get(names.size()-1).add("Text 4");
-        names.get(names.size()-1).add("Text 5");
-        names.get(names.size()-1).add("Text 6");
+        lessonNames.add("Lesson " + lessonsCount);
+
+        buttonNames.add(new ArrayList<String>());
+        buttonActions.add(new ArrayList<Integer>());
+        for (int i = 1; i <= HW_BUTTONS; i++) {
+            buttonNames.get(buttonNames.size() - 1).add("Button " + i);
+            buttonActions.get(buttonActions.size() - 1).add(0);
+        }
 
         writeConfig();
     }
 
     public void deleteLesson() throws IOException {
-        lessons--;
-        names.remove(names.size()-1);
+        lessonsCount--;
+
+        lessonNames.remove(lessonNames.size()-1);
+        buttonNames.remove(buttonNames.size()-1);
+        buttonActions.remove(buttonActions.size()-1);
 
         writeConfig();
     }
 
-    public String getLessonName(int lesson, int button) {
-        return names.get(lesson).get(button);
+    public String getButtonName(int lesson, int button) {
+        return buttonNames.get(lesson).get(button);
     }
 
-    public void changeLessonName(int lesson, int button, String str) throws IOException {
-        names.get(lesson).remove(button);
-        names.get(lesson).add(button, str);
+    public void changeButtonName(int lesson, int button, String str) throws IOException {
+        buttonNames.get(lesson).remove(button);
+        buttonNames.get(lesson).add(button, str);
 
         writeConfig();
     }
 
-    public void addAction(int button, int actionId) throws IOException {
-        actions.put(button, actionId);
+    public int getButtonAction(int lesson, int button) {
+        return buttonActions.get(lesson).get(button);
+    }
 
-        writeConfig();
+    public void changeButtonAction(int lesson, int button, int newButtonAction) {
+        buttonActions.get(lesson).remove(button);
+        buttonActions.get(lesson).add(button, newButtonAction);
+    }
+
+    public int getsLesson() {
+        return sLesson;
+    }
+
+    public void setsLesson(int newSlesson) {
+        sLesson = newSlesson;
     }
 }
