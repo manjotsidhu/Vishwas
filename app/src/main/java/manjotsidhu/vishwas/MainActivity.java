@@ -455,6 +455,7 @@ public class MainActivity extends AppCompatActivity {
         ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, actions);
         actionSwitcher.setAdapter(dataAdapter);
         dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        actionSwitcher.setSelection(config.getButtonAction(lesson, i));
 
         actionSwitcher.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
@@ -473,19 +474,32 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Secondary Switch
+        // Secondary Lesson Switch
         final Switch sLessonSwitch = dialogLayout.findViewById(R.id.sLesson);
         if (config.getsLesson() == lesson)
             sLessonSwitch.setChecked(true);
         else
             sLessonSwitch.setChecked(false);
 
+        // Primary Lesson Switch
+        final Switch pLessonSwitch = dialogLayout.findViewById(R.id.pLesson);
+        if (config.getpLesson() == lesson)
+            pLessonSwitch.setChecked(true);
+        else
+            pLessonSwitch.setChecked(false);
+
+
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setPositiveButton("Save",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
-                        // Save Changes
                         if (mp != null) mp.stop();
+
+                        // Check if both primary and secondary lesson switch is checked
+                        if (pLessonSwitch.isChecked() && sLessonSwitch.isChecked()) {
+                            Toast.makeText(getApplicationContext(), "Secondary Lesson cannot be the primary lesson, please try again", Toast.LENGTH_LONG).show();
+                            return;
+                        }
 
                         // Change button name if changed
                         if (editText.getText().toString() != config.getButtonName(lesson, i)) {
@@ -499,8 +513,12 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         // Switch secondary lesson
-                        if(sLessonSwitch.isChecked())
+                        if (sLessonSwitch.isChecked())
                             config.setsLesson(lesson);
+
+                        // Switch primary lesson
+                        if (pLessonSwitch.isChecked())
+                            config.setpLesson(lesson);
 
                         // Change Action if changed
                         if (config.getButtonAction(lesson, i) != tempAction[0]) {

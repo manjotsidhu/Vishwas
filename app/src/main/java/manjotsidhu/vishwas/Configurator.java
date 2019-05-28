@@ -191,4 +191,12 @@ public class Configurator {
     public void setsLesson(int newSlesson) {
         sLesson = newSlesson;
     }
+
+    public int getpLesson() {
+        return pLesson;
+    }
+
+    public void setpLesson(int newPleasson) {
+        pLesson = newPleasson;
+    }
 }

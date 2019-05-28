@@ -49,12 +49,31 @@
 
         </LinearLayout>
 
-        <Switch
-            android:id="@+id/sLesson"
-            android:layout_width="wrap_content"
+        <android.support.v7.widget.GridLayout
+            android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:text="Secondary Lesson" />
+            android:layout_gravity="center"
+            android:layout_marginTop="8dp"
+            app:columnCount="2">
+
+            <Switch
+                android:id="@+id/pLesson"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_margin="4dp"
+                android:layout_weight="1"
+                android:text="Primary Lesson"
+                app:layout_gravity="center_horizontal" />
+
+            <Switch
+                android:id="@+id/sLesson"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:layout_margin="4dp"
+                android:layout_weight="1"
+                android:text="Secondary Lesson"
+                app:layout_gravity="center_horizontal" />
+        </android.support.v7.widget.GridLayout>
 
         <android.support.v7.widget.GridLayout
             android:layout_width="wrap_content"
