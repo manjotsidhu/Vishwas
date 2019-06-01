@@ -41,6 +41,7 @@ public class Configurator {
         lessonsCount = 1;
 
         buttonNames.add(new ArrayList<String>());
+        buttonActions.add(new ArrayList<Integer>());
         for (int i = 1; i <= HW_BUTTONS; i++) {
             buttonNames.get(buttonNames.size() - 1).add("Button " + i);
             buttonActions.get(buttonNames.size() - 1).add(0);
@@ -179,24 +180,30 @@ public class Configurator {
         return buttonActions.get(lesson).get(button);
     }
 
-    public void changeButtonAction(int lesson, int button, int newButtonAction) {
+    public void changeButtonAction(int lesson, int button, int newButtonAction) throws IOException {
         buttonActions.get(lesson).remove(button);
         buttonActions.get(lesson).add(button, newButtonAction);
+
+        writeConfig();
     }
 
     public int getsLesson() {
         return sLesson;
     }
 
-    public void setsLesson(int newSlesson) {
+    public void setsLesson(int newSlesson) throws IOException {
         sLesson = newSlesson;
+
+        writeConfig();
     }
 
     public int getpLesson() {
         return pLesson;
     }
 
-    public void setpLesson(int newPleasson) {
+    public void setpLesson(int newPleasson) throws IOException {
         pLesson = newPleasson;
+
+        writeConfig();
     }
 }

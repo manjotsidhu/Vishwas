@@ -13,6 +13,7 @@ class Client extends AsyncTask<Void, Boolean, Boolean> {
     final static int PORT = 4444;
     String Fp;
     private Context context;
+    int count = 0;
 
     public Client(Context context, String host, String Fp) {
         this.context = context;
@@ -61,23 +62,32 @@ class Client extends AsyncTask<Void, Boolean, Boolean> {
         }
     }
 
-
     @Override
     protected Boolean doInBackground(Void... voids) {
-        return serve(Fp);
+        boolean r = false;
+
+        while (count < 5) {
+            if (r) {
+                return true;
+            } else {
+                r = serve(Fp);
+            }
+            count++;
+        }
+        return false;
     }
 
     @Override
     protected void onPostExecute(Boolean v) {
         // TODO turn off hotspot and location
-
-        if(v)
+        if(v) {
             Toast.makeText(context,
                     "Changes have been saved",
                     Toast.LENGTH_SHORT).show();
-        else
+        } else {
             Toast.makeText(context,
                     "Failed to save changes, Please try again",
                     Toast.LENGTH_LONG).show();
+        }
     }
 }

@@ -44,6 +44,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import it.sauronsoftware.jave.AudioAttributes;
+import it.sauronsoftware.jave.Encoder;
+import it.sauronsoftware.jave.EncoderException;
+import it.sauronsoftware.jave.EncodingAttributes;
+import it.sauronsoftware.jave.FFMPEGLocator;
+
 import static manjotsidhu.vishwas.Configurator.path;
 
 public class MainActivity extends AppCompatActivity {
@@ -55,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
     MediaPlayer mp = null;
 
     // Media Recorder
-    private MediaRecorder myAudioRecorder;
+    private Recorder myAudioRecorder;
 
     // State = edit mode, lesson = current lesson, cb = temporary current button pressed
     int state = 0, lesson = 0, cb = 0;
@@ -261,12 +267,29 @@ public class MainActivity extends AppCompatActivity {
             finish();
             System.exit(0);
         } else if (id == R.id.action_test) {
-            /* ONLY FOR TESTING PURPOSE
+            /* ONLY FOR TESTING PURPOSE*/
+            File source = new File(Configurator.path + "/04.wav");
+            File target = new File(Configurator.path + "/target.mp3");
+            AudioAttributes audio = new AudioAttributes();
+            audio.setCodec("libmp3lame");
+            audio.setBitRate(new Integer(128000));
+            audio.setChannels(new Integer(2));
+            audio.setSamplingRate(new Integer(44100));
+            EncodingAttributes attrs = new EncodingAttributes();
+            attrs.setFormat("mp3");
+            attrs.setAudioAttributes(audio);
+            Encoder encoder = new Encoder(new FFMPEGLocator() {
+                @Override
+                protected String getFFMPEGExecutablePath() {
+                    return Configurator.path + "/ffmpeg";
+                }
+            });
+
             try {
-                config.addAction(1, 0);
-            } catch (IOException e) {
+                encoder.encode(source, target, attrs);
+            } catch (Exception e) {
                 e.printStackTrace();
-            }*/
+            }
         }
 
         return super.onOptionsItemSelected(item);
@@ -442,7 +465,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         // Action Spinner
-        Spinner actionSwitcher = dialogLayout.findViewById(R.id.actionSwitcher);
+        final Spinner actionSwitcher = dialogLayout.findViewById(R.id.actionSwitcher);
         ArrayList<String> actions = new ArrayList<>();
         actions.add("Play");
         actions.add("Next Lesson");
@@ -501,6 +524,11 @@ public class MainActivity extends AppCompatActivity {
                             return;
                         }
 
+                        if (sLessonSwitch.isChecked() && ((actionSwitcher.getSelectedItemPosition() == 1) || (actionSwitcher.getSelectedItemPosition() == 2))) {
+                            Toast.makeText(getApplicationContext(), "Next/Previous lesson is not applicable for secondary lesson, please try again", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+
                         // Change button name if changed
                         if (editText.getText().toString() != config.getButtonName(lesson, i)) {
                             try {
@@ -513,31 +541,35 @@ public class MainActivity extends AppCompatActivity {
                         }
 
                         // Switch secondary lesson
-                        if (sLessonSwitch.isChecked())
-                            config.setsLesson(lesson);
+                        if (sLessonSwitch.isChecked()) {
+                            try {
+                                config.setsLesson(lesson);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
 
                         // Switch primary lesson
-                        if (pLessonSwitch.isChecked())
-                            config.setpLesson(lesson);
+                        if (pLessonSwitch.isChecked()) {
+                            try {
+                                config.setpLesson(lesson);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
 
                         // Change Action if changed
                         if (config.getButtonAction(lesson, i) != tempAction[0]) {
-                            config.changeButtonAction(lesson, i, tempAction[0]);
-                        }
-
-                        // Write Config
-                        try {
-                            config.writeConfig();
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                            try {
+                                config.changeButtonAction(lesson, i, tempAction[0]);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
                         }
 
                         // Sync changes to server
                         String fp = path + "/" + lesson + i + ".mp3";
 
-                        new Client(MainActivity.this, ServerIp, path + "/" + Configurator.config).execute();
-                        if(Tools.fileExists(fp)) new Client(MainActivity.this, ServerIp, fp).execute();
-                        // TODO Fix this -\v\
                         new Client(MainActivity.this, ServerIp, path + "/" + Configurator.config).execute();
                         if(Tools.fileExists(fp)) new Client(MainActivity.this, ServerIp, fp).execute();
                     }
@@ -611,21 +643,8 @@ public class MainActivity extends AppCompatActivity {
 
         startBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-
-                // TODO Audio Recorder records in MPEG AAC Format which jLayer fails to read
-                myAudioRecorder = new MediaRecorder();
-                myAudioRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-                myAudioRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-                myAudioRecorder.setOutputFile(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".mp3");
-                myAudioRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-                try {
-                    myAudioRecorder.prepare();
-                    myAudioRecorder.start();
-                } catch (IllegalStateException ise) {
-                    // make something ...
-                } catch (IOException ioe) {
-                    // make something
-                }
+                myAudioRecorder = new Recorder(Environment.getExternalStorageDirectory().getAbsolutePath() + "/Vishwas/t" + lesson + i + ".mp3");
+                myAudioRecorder.startRecording();
                 Toast.makeText(getApplicationContext(), "Recording started", Toast.LENGTH_LONG).show();
 
                 startBtn.setEnabled(false);
@@ -638,8 +657,7 @@ public class MainActivity extends AppCompatActivity {
 
         stopBtn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                myAudioRecorder.stop();
-                myAudioRecorder.release();
+                myAudioRecorder.stopRecording();
                 myAudioRecorder = null;
                 Toast.makeText(getApplicationContext(), "Audio recorded successfully", Toast.LENGTH_LONG).show();
 
@@ -681,7 +699,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
     }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         try {
@@ -712,6 +729,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void connectToServer() {
+        ServerIp = null;
         HotspotManager hm = new HotspotManager(this);
         hm.start("pi", "raspberry");
 
@@ -769,9 +787,7 @@ public class MainActivity extends AppCompatActivity {
 
                 if (progressBarStatus) {
                     try {
-                        // TODO fix this \v\
-                        //progressBar.setTitle("Connection Successful");
-                        Thread.sleep(1000);
+                        Thread.sleep(500);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
