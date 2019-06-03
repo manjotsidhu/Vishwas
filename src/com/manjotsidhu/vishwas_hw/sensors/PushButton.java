@@ -139,6 +139,12 @@ public class PushButton {
             case 3:
                 exitAction();
                 break;
+            case 4:
+                incVol();
+                break;
+            case 5:
+                decVol();
+                break;
             default:
                 break;
         }
@@ -161,6 +167,28 @@ public class PushButton {
             player.start();
         }
             //System.err.println("ERROR: Audio File " + Fp + " was not found");
+    }
+    
+    public void incVol() {
+        Process p;
+        try {
+            p = Runtime.getRuntime().exec("amixer set PCM 10%+");
+            p.waitFor();
+            p.destroy();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public void decVol() {
+        Process p;
+        try {
+            p = Runtime.getRuntime().exec("amixer set PCM 10%-");
+            p.waitFor();
+            p.destroy();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
     
     public void stopAction(int button, boolean isSec) {

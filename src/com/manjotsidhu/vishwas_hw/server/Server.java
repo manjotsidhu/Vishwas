@@ -109,8 +109,6 @@ public class Server extends Thread {
     }
     
     public static void encodeToMp3(String input, String output) {
-        String tmp;
-        String s = new String();
         Process p;
         try {
             p = Runtime.getRuntime().exec("ffmpeg -i " + input + " -acodec libmp3lame " + output + " -y");
