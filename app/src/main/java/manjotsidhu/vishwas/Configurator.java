@@ -24,7 +24,7 @@ public class Configurator {
     int sLesson;
 
     ArrayList<String> lessonNames = new ArrayList<>();
-    ArrayList<ArrayList<String>> buttonNames = new ArrayList<ArrayList<String>>();
+    ArrayList<ArrayList<String>> buttonNames = new ArrayList<>();
     ArrayList<ArrayList<Integer>> buttonActions = new ArrayList<>();
 
     Configurator(int HW_BUTTONS) {
@@ -39,7 +39,10 @@ public class Configurator {
 
     public void initConfig() throws IOException {
         lessonsCount = 1;
+        pLesson = 0;
+        sLesson = 1;
 
+        lessonNames.add("Lesson 1");
         buttonNames.add(new ArrayList<String>());
         buttonActions.add(new ArrayList<Integer>());
         for (int i = 1; i <= HW_BUTTONS; i++) {
@@ -51,6 +54,10 @@ public class Configurator {
     }
 
     public void readConfig() throws IOException {
+        lessonNames = new ArrayList<>();
+        buttonNames = new ArrayList<>();
+        buttonActions = new ArrayList<>();
+        
         int length = (int) configFile.length();
         byte[] bytes = new byte[length];
 
@@ -165,6 +172,16 @@ public class Configurator {
         writeConfig();
     }
 
+    public void deleteLesson(int lesson) throws IOException {
+        lessonsCount--;
+
+        lessonNames.remove(lesson);
+        buttonNames.remove(lesson);
+        buttonActions.remove(lesson);
+
+        writeConfig();
+    }
+
     public String getButtonName(int lesson, int button) {
         return buttonNames.get(lesson).get(button);
     }
@@ -203,6 +220,21 @@ public class Configurator {
 
     public void setpLesson(int newPleasson) throws IOException {
         pLesson = newPleasson;
+
+        writeConfig();
+    }
+
+    public ArrayList<String> getLessonNames() {
+        return lessonNames;
+    }
+
+    public String getLessonName(int lesson) {
+        return lessonNames.get(lesson);
+    }
+
+    public void changeLessonName(int currentLesson, String newLessonName) throws IOException {
+        lessonNames.remove(currentLesson);
+        lessonNames.add(currentLesson, newLessonName);
 
         writeConfig();
     }

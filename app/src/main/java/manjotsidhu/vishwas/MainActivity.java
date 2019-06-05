@@ -5,10 +5,9 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
-import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -17,6 +16,7 @@ import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -44,18 +44,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import it.sauronsoftware.jave.AudioAttributes;
-import it.sauronsoftware.jave.Encoder;
-import it.sauronsoftware.jave.EncoderException;
-import it.sauronsoftware.jave.EncodingAttributes;
-import it.sauronsoftware.jave.FFMPEGLocator;
-
 import static manjotsidhu.vishwas.Configurator.path;
 
 public class MainActivity extends AppCompatActivity {
 
     // Number of Buttons
     public final static int HW_BUTTONS = 6;
+
+    // Lessons Switcher
+    Spinner lessonsSwitcher;
+    ArrayAdapter<String> dataAdapter;
+
+    // Lesson settings state
+    boolean lessonState = false;
 
     // Media Player
     MediaPlayer mp = null;
@@ -69,8 +70,8 @@ public class MainActivity extends AppCompatActivity {
     // Configurator class
     Configurator config = new Configurator(HW_BUTTONS);
 
-    // Button Names
-    final List<String> buttonNames = new ArrayList<>();
+    // Lesson Names
+    List<String> lessonNames = new ArrayList<>();
 
     // Buttons
    Button[] buttons = new Button[HW_BUTTONS];
@@ -99,9 +100,7 @@ public class MainActivity extends AppCompatActivity {
         // Toolbar
         Toolbar mTopToolbar = findViewById(R.id.toolbar);
         setSupportActionBar(mTopToolbar);
-        mTopToolbar.setTitleTextColor(Color.WHITE);
-
-        //button1 = this.findViewById(R.id.button1);
+        getSupportActionBar().setDisplayShowTitleEnabled(false);
 
         GridLayout layout = this.findViewById(R.id.grid);
         for (int i = 0 ; i < buttons.length; i++) {
@@ -133,28 +132,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        // Lessons switcher
-        final Spinner lessonsSwitcher = findViewById(R.id.spinner);
-        for (int i = 1; i <= config.getLessons(); i++)
-            buttonNames.add("Lesson " + i);
-        ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, buttonNames);
-        lessonsSwitcher.setAdapter(dataAdapter);
-        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-        lessonsSwitcher.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                // If new lesson is selected
-                lesson = position;
-                updateButton();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // Nothing
-            }
-        });
 
         boolean gotFocus = requestAudioFocus(MainActivity.this);
         if (gotFocus) {
@@ -228,6 +205,32 @@ public class MainActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
+        menu.findItem(R.id.lesson_settings).setVisible(lessonState);
+
+        MenuItem item1 = menu.findItem(R.id.spinner);
+
+        // Lessons switcher
+        lessonsSwitcher = (Spinner) MenuItemCompat.getActionView(item1);
+        lessonsSwitcher.getBackground().setColorFilter(getResources().getColor(android.R.color.white), PorterDuff.Mode.SRC_ATOP);
+        lessonNames = config.getLessonNames();
+        dataAdapter = new ArrayAdapter<>(this, R.layout.spinner_item, lessonNames);
+        lessonsSwitcher.setAdapter(dataAdapter);
+        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        lessonsSwitcher.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                // If new lesson is selected
+                lesson = position;
+                updateButtons();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // Nothing
+            }
+        });
+
         return true;
     }
 
@@ -236,28 +239,10 @@ public class MainActivity extends AppCompatActivity {
      */
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_add) {
-            try {
-                config.addLesson();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            buttonNames.add("Lesson " + config.getLessons());
-            return true;
-        } else if (id == R.id.action_delete) {
-            try {
-                config.deleteLesson();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            buttonNames.remove(buttonNames.size() - 1);
-            return true;
+        if (id == R.id.lesson_settings) {
+            lessonsDialog();
         } else if (id == R.id.action_vol) {
             AudioManager audio = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
             if (audio != null) {
@@ -268,28 +253,6 @@ public class MainActivity extends AppCompatActivity {
             System.exit(0);
         } else if (id == R.id.action_test) {
             /* ONLY FOR TESTING PURPOSE*/
-            File source = new File(Configurator.path + "/04.wav");
-            File target = new File(Configurator.path + "/target.mp3");
-            AudioAttributes audio = new AudioAttributes();
-            audio.setCodec("libmp3lame");
-            audio.setBitRate(new Integer(128000));
-            audio.setChannels(new Integer(2));
-            audio.setSamplingRate(new Integer(44100));
-            EncodingAttributes attrs = new EncodingAttributes();
-            attrs.setFormat("mp3");
-            attrs.setAudioAttributes(audio);
-            Encoder encoder = new Encoder(new FFMPEGLocator() {
-                @Override
-                protected String getFFMPEGExecutablePath() {
-                    return Configurator.path + "/ffmpeg";
-                }
-            });
-
-            try {
-                encoder.encode(source, target, attrs);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
         }
 
         return super.onOptionsItemSelected(item);
@@ -342,6 +305,8 @@ public class MainActivity extends AppCompatActivity {
 
                 if (state == 0) {
                     state = 1;
+                    lessonState = true;
+                    invalidateOptionsMenu();
                     for (Button b: buttons) {
                         b.setBackgroundResource(R.drawable.roundedbutton_edit);
                     }
@@ -350,6 +315,8 @@ public class MainActivity extends AppCompatActivity {
                     connectToServer();
                 } else {
                     state = 0;
+                    lessonState = false;
+                    invalidateOptionsMenu();
                     for (Button b: buttons) {
                         b.setBackgroundResource(R.drawable.roundedbutton);
                     }
@@ -367,29 +334,29 @@ public class MainActivity extends AppCompatActivity {
         switch (config.getButtonAction(lesson, button)) {
             case 0: play(button, false); break;
             case 1: builder.setTitle(config.getButtonName(lesson, button) + " is set to next lesson");
-                    builder.setMessage("This button is set to proceed to the next lesson on the hardware");
+                    builder.setMessage("This button is set to proceed to the next lesson on the hardware.");
                     builder.create().show();
                     break;
             case 2: builder.setTitle(config.getButtonName(lesson, button) + " is set to previous lesson");
-                    builder.setMessage("This button is set to proceed to the previous lesson on the hardware");
+                    builder.setMessage("This button is set to proceed to the previous lesson on the hardware.");
                     builder.create().show();
                     break;
             case 3: builder.setTitle(config.getButtonName(lesson, button) + " is set to shutdown");
-                    builder.setMessage("This button is set to shutdown the hardware on the hardware");
+                    builder.setMessage("This button is set to shutdown the hardware.");
                     builder.create().show();
                     break;
             case 4: builder.setTitle(config.getButtonName(lesson, button) + " is set to increase volume");
-                    builder.setMessage("This button is set to increase the volume on the hardware");
+                    builder.setMessage("This button is set to increase the volume on the hardware.");
                     builder.create().show();
                     break;
             case 5: builder.setTitle(config.getButtonName(lesson, button) + " is set to decrease volume");
-                    builder.setMessage("This button is set to decrease the volume on the hardware");
+                    builder.setMessage("This button is set to decrease the volume on the hardware.");
                     builder.create().show();
                     break;
         }
     }
 
-    public void updateButton() {
+    public void updateButtons() {
         int i = 0;
         for (Button b: buttons) {
             b.setText(config.getButtonName(lesson, i));
@@ -419,6 +386,123 @@ public class MainActivity extends AppCompatActivity {
             mp.start();
     }
 
+    private void updateLessons() {
+        lessonNames = config.getLessonNames();
+        dataAdapter = new ArrayAdapter<>(this, R.layout.spinner_item, lessonNames);
+        dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        lessonsSwitcher.setAdapter(dataAdapter);
+        lessonsSwitcher.setSelection(lesson);
+        updateButtons();
+    }
+
+
+    public void lessonsDialog() {
+        LayoutInflater inflater = getLayoutInflater();
+        final View dialogLayout = inflater.inflate(R.layout.lesson_settings_dialog, null);
+
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle(config.getLessonName(lesson));
+
+        // Edit Lesson name
+        final EditText editText = dialogLayout.findViewById(R.id.editLessonName);
+        editText.setText(config.getLessonName(lesson), TextView.BufferType.EDITABLE);
+
+        // Secondary Lesson Switch
+        final Switch sLessonSwitch = dialogLayout.findViewById(R.id.sLesson);
+        if (config.getsLesson() == lesson)
+            sLessonSwitch.setChecked(true);
+        else
+            sLessonSwitch.setChecked(false);
+
+        // Primary Lesson Switch
+        final Switch pLessonSwitch = dialogLayout.findViewById(R.id.pLesson);
+        if (config.getpLesson() == lesson)
+            pLessonSwitch.setChecked(true);
+        else
+            pLessonSwitch.setChecked(false);
+
+        builder.setPositiveButton("Save",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        // Check if both primary and secondary lesson switch is checked
+                        if (pLessonSwitch.isChecked() && sLessonSwitch.isChecked()) {
+                            Toast.makeText(getApplicationContext(), "Secondary Lesson cannot be the primary lesson, please try again", Toast.LENGTH_LONG).show();
+                            return;
+                        }
+
+                        // Change button name if changed
+                        if (editText.getText().toString() != config.getLessonName(lesson)) {
+                            try {
+                                config.changeLessonName(lesson, editText.getText().toString());
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            } finally {
+                                updateLessons();
+                            }
+                        }
+
+                        // Switch secondary lesson
+                        if (sLessonSwitch.isChecked()) {
+                            try {
+                                config.setsLesson(lesson);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        // Switch primary lesson
+                        if (pLessonSwitch.isChecked()) {
+                            try {
+                                config.setpLesson(lesson);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                });
+
+        builder.setNeutralButton("new lesson", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                try {
+                    config.addLesson();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                lesson++;
+                updateLessons();
+            }
+        });
+
+        builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                /*Toast.makeText(getApplicationContext(),
+                        android.R.string.cancel, Toast.LENGTH_SHORT).show();*/
+            }
+        });
+
+        builder.setView(dialogLayout);
+        final AlertDialog lessonDialog = builder.create();
+        lessonDialog.show();
+
+        // Delete lesson
+        Button removeLesson = dialogLayout.findViewById(R.id.lesson_delete);
+        removeLesson.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                try {
+                    config.deleteLesson(lesson);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                if (lesson == 0)
+                    lesson = config.getLessons()-1;
+                else
+                    lesson--;
+
+                updateLessons();
+                lessonDialog.dismiss();
+            }
+        });
+    }
 
     public void editDialog(final int i) {
         LayoutInflater inflater = getLayoutInflater();
@@ -497,37 +581,11 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Secondary Lesson Switch
-        final Switch sLessonSwitch = dialogLayout.findViewById(R.id.sLesson);
-        if (config.getsLesson() == lesson)
-            sLessonSwitch.setChecked(true);
-        else
-            sLessonSwitch.setChecked(false);
-
-        // Primary Lesson Switch
-        final Switch pLessonSwitch = dialogLayout.findViewById(R.id.pLesson);
-        if (config.getpLesson() == lesson)
-            pLessonSwitch.setChecked(true);
-        else
-            pLessonSwitch.setChecked(false);
-
-
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setPositiveButton("Save",
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int which) {
                         if (mp != null) mp.stop();
-
-                        // Check if both primary and secondary lesson switch is checked
-                        if (pLessonSwitch.isChecked() && sLessonSwitch.isChecked()) {
-                            Toast.makeText(getApplicationContext(), "Secondary Lesson cannot be the primary lesson, please try again", Toast.LENGTH_LONG).show();
-                            return;
-                        }
-
-                        if (sLessonSwitch.isChecked() && ((actionSwitcher.getSelectedItemPosition() == 1) || (actionSwitcher.getSelectedItemPosition() == 2))) {
-                            Toast.makeText(getApplicationContext(), "Next/Previous lesson is not applicable for secondary lesson, please try again", Toast.LENGTH_LONG).show();
-                            return;
-                        }
 
                         // Change button name if changed
                         if (editText.getText().toString() != config.getButtonName(lesson, i)) {
@@ -536,25 +594,7 @@ public class MainActivity extends AppCompatActivity {
                             } catch (IOException e) {
                                 e.printStackTrace();
                             } finally {
-                                updateButton();
-                            }
-                        }
-
-                        // Switch secondary lesson
-                        if (sLessonSwitch.isChecked()) {
-                            try {
-                                config.setsLesson(lesson);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                        // Switch primary lesson
-                        if (pLessonSwitch.isChecked()) {
-                            try {
-                                config.setpLesson(lesson);
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                                updateButtons();
                             }
                         }
 
@@ -755,7 +795,9 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onCancel(DialogInterface dialog) {
                 state = 0;
-                updateButton();
+                lessonState = false;
+                invalidateOptionsMenu();
+                updateButtons();
 
                 for (Button b: buttons)
                     b.setBackgroundResource(R.drawable.roundedbutton);

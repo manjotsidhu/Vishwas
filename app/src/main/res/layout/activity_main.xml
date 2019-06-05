@@ -18,7 +18,10 @@
             android:layout_height="wrap_content"
             android:background="?attr/colorPrimary"
             android:minHeight="?attr/actionBarSize"
-            android:theme="?attr/actionBarTheme"></android.support.v7.widget.Toolbar>
+            app:theme="@style/ThemeOverlay.AppCompat"
+            app:popupTheme="@style/ThemeOverlay.AppCompat"
+            app:subtitleTextColor="@android:color/white"
+            app:titleTextColor="@android:color/white"></android.support.v7.widget.Toolbar>
 
         <ScrollView
             android:layout_width="match_parent"
@@ -41,7 +44,7 @@
                 android:layout_marginTop="32dp"
                 app:columnCount="2">
 
-                <TextView
+                <!--<TextView
                     android:id="@+id/textView"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -52,7 +55,7 @@
                     android:id="@+id/spinner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    app:layout_gravity="fill_horizontal" />
+                    app:layout_gravity="fill_horizontal" />-->
 
             </android.support.v7.widget.GridLayout>
 
