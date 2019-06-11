@@ -158,11 +158,15 @@ public class PushButton {
         else
             Fp = Configurator.path + cLesson + button + ".mp3";
 
+        if (!player.isStopped()) {
+            player.close();
+            player.stop();
+        }
+        
         if (new File(Fp).isFile()) {
             player = new CPlayer(Fp, true);
             player.start();
-        }
-        else {
+        } else {
             player = new CPlayer(Configurator.path + "sample.mp3", true);
             player.start();
         }

@@ -42,7 +42,7 @@ public class CPlayer extends Thread {
             e.printStackTrace();
         }
     }
-
+   
     public boolean isStopped() {
         if (playMP3 != null)
             return playMP3.isComplete() || (playMP3.getPosition() == 0);

@@ -57,6 +57,8 @@ public class Configurator {
 
     public void initConfig() throws IOException {
         lessonsCount = 1;
+        pLesson = 0;
+        sLesson = 1;
 
         lessonNames.add("Lesson 1");
         buttonNames.add(new ArrayList<>());
