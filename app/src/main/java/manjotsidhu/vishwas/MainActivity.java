@@ -458,6 +458,10 @@ public class MainActivity extends AppCompatActivity {
                                 e.printStackTrace();
                             }
                         }
+
+                        // Save the changes to server
+                        new Client(MainActivity.this, ServerIp, path + "/" + Configurator.config).execute();
+
                     }
                 });
 
